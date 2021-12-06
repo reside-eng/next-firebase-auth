@@ -8,6 +8,53 @@ import {
 import { getConfig } from 'src/config'
 import AuthAction from 'src/AuthAction'
 
+const determineAuthUser = async ({
+  useToken,
+  res,
+  req,
+  keys,
+  secure,
+  signed,
+}) => {
+  // Get the user either from:
+  // * the ID token, refreshing the token as needed (via a network
+  //   request), which will make `AuthUser.getIdToken` resolve to
+  //   a valid ID token value
+  // * the "AuthUser" cookie (no network request), which will make
+  //  `AuthUser.getIdToken` resolve to null
+  if (useToken) {
+    // Get the user's ID token from a cookie, verify it (refreshing
+    // as needed), and return the serialized AuthUser in props.
+    const cookieValStr = getCookie(
+      getAuthUserTokensCookieName(),
+      {
+        req,
+        res,
+      },
+      { keys, secure, signed }
+    )
+    const { idToken, refreshToken } = cookieValStr
+      ? JSON.parse(cookieValStr)
+      : {}
+    if (idToken) {
+      return verifyIdToken(idToken, refreshToken)
+    }
+    return createAuthUser() // unauthenticated AuthUser
+  }
+  // Get the user's info from a cookie, verify it (refreshing
+  // as needed), and return the serialized AuthUser in props.
+  const cookieValStr = getCookie(
+    getAuthUserCookieName(),
+    {
+      req,
+      res,
+    },
+    { keys, secure, signed }
+  )
+  return createAuthUser({
+    serializedAuthUser: cookieValStr,
+  })
+}
 /**
  * An wrapper for a page's exported getServerSideProps that
  * provides the authed user's info as a prop. Optionally,
@@ -43,52 +90,12 @@ const withAuthUserTokenSSR =
   ) =>
   (getServerSidePropsFunc) =>
   async (ctx) => {
-    const { req, res } = ctx
+    const AuthUser = await determineAuthUser({
+      useToken,
+      ...ctx,
+      ...getConfig().cookies,
+    })
 
-    const { keys, secure, signed } = getConfig().cookies
-
-    let AuthUser
-
-    // Get the user either from:
-    // * the ID token, refreshing the token as needed (via a network
-    //   request), which will make `AuthUser.getIdToken` resolve to
-    //   a valid ID token value
-    // * the "AuthUser" cookie (no network request), which will make
-    //  `AuthUser.getIdToken` resolve to null
-    if (useToken) {
-      // Get the user's ID token from a cookie, verify it (refreshing
-      // as needed), and return the serialized AuthUser in props.
-      const cookieValStr = getCookie(
-        getAuthUserTokensCookieName(),
-        {
-          req,
-          res,
-        },
-        { keys, secure, signed }
-      )
-      const { idToken, refreshToken } = cookieValStr
-        ? JSON.parse(cookieValStr)
-        : {}
-      if (idToken) {
-        AuthUser = await verifyIdToken(idToken, refreshToken)
-      } else {
-        AuthUser = createAuthUser() // unauthenticated AuthUser
-      }
-    } else {
-      // Get the user's info from a cookie, verify it (refreshing
-      // as needed), and return the serialized AuthUser in props.
-      const cookieValStr = getCookie(
-        getAuthUserCookieName(),
-        {
-          req,
-          res,
-        },
-        { keys, secure, signed }
-      )
-      AuthUser = createAuthUser({
-        serializedAuthUser: cookieValStr,
-      })
-    }
     const AuthUserSerialized = AuthUser.serialize()
 
     // If specified, redirect to the login page if the user is unauthed.
