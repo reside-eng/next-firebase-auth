@@ -96,7 +96,7 @@ function* findLegacyRedirect({
 
   // yields back to the caller whether or not it will perform
   // any operations on the next iteration
-  yield unauthenticatedRedirectURL || authenticatedRedirectURL
+  yield shouldRedirectUnauthedUser || shouldRedirectAuthedUser
 
   // If specified, redirect to the login page if the user is unauthed.
   if (shouldRedirectUnauthedUser)
