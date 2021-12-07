@@ -7,11 +7,11 @@ import AuthAction from 'src/AuthAction'
  *
  * @param {Object} redirectSettings
  */
-export const redirectUnauthenticatedUser = (
+export function redirectUnauthenticatedUser(
   unauthenticatedRedirectURL,
   ctx,
   AuthUser
-) => {
+) {
   if (!unauthenticatedRedirectURL) {
     throw new Error(
       `When "whenUnauthed" is set to AuthAction.REDIRECT_TO_LOGIN, "authPageURL" must be set.`
@@ -41,11 +41,11 @@ export const redirectUnauthenticatedUser = (
  *
  * @param {} redirectSettings
  */
-export const redirectAuthenticatedUser = (
+export function redirectAuthenticatedUser(
   authenticatedRedirectURL,
   ctx,
   AuthUser
-) => {
+) {
   if (!authenticatedRedirectURL) {
     throw new Error(
       `When "whenAuthed" is set to AuthAction.REDIRECT_TO_APP, "appPageURL" must be set.`
@@ -70,9 +70,14 @@ export const redirectAuthenticatedUser = (
 }
 
 /**
- * findLegacyRedirect.
+ * Generates a process that locates a redirect for a configuration that matches
+ * the schema for authenticated and unauthenticated users
  *
- * @param {} redirectSettings
+ * @generator
+ * @function findLegacyRedirect
+ * @param {Object} redirectSettings
+ * @yields {boolean} whether or not the function will continue to process the legacy configuration on the next iteration
+ * @returns {Object | null} redirect config or null
  */
 function* findLegacyRedirect({
   authPageURL,
@@ -89,6 +94,8 @@ function* findLegacyRedirect({
   const shouldRedirectAuthedUser =
     AuthUser.id && whenAuthed === AuthAction.REDIRECT_TO_APP
 
+  // yields back to the caller whether or not it will perform
+  // any operations on the next iteration
   yield unauthenticatedRedirectURL || authenticatedRedirectURL
 
   // If specified, redirect to the login page if the user is unauthed.
@@ -111,7 +118,7 @@ function* findLegacyRedirect({
  *
  * @param {}
  */
-const findRedirectRule = ({ AuthUser, redirectConfig }) => {
+function findRedirectRule({ AuthUser, redirectConfig }) {
   const config = redirectConfig || getConfig().redirectConfig
   if (!config) return null
 
@@ -127,7 +134,7 @@ const findRedirectRule = ({ AuthUser, redirectConfig }) => {
  *
  * @param {} redirectSettings
  */
-export const processRedirect = (redirectSettings) => {
+export function processRedirect(redirectSettings) {
   const legacyRedirect = findLegacyRedirect(redirectSettings)
   const { value: useLegacyRedirect } = legacyRedirect.next()
 
