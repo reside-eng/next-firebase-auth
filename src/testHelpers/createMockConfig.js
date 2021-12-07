@@ -27,11 +27,11 @@ const createMockConfig = ({ clientSide } = {}) => {
     },
     redirectConfig: {
       authenticatedUser: {
-        destination: '/app',
+        destination: '/',
         permanenent: false,
       },
       unauthenticatedUser: {
-        destination: '/app',
+        destination: '/login',
         permanenent: false,
       },
     },

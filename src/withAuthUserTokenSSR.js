@@ -1,3 +1,6 @@
+import { getConfig } from 'src/config'
+import AuthAction from 'src/AuthAction'
+import { processRedirect } from 'src/redirects'
 import createAuthUser from 'src/createAuthUser'
 import { getCookie } from 'src/cookies'
 import { verifyIdToken } from 'src/firebaseAdmin'
@@ -5,8 +8,6 @@ import {
   getAuthUserCookieName,
   getAuthUserTokensCookieName,
 } from 'src/authCookies'
-import { getConfig } from 'src/config'
-import AuthAction from 'src/AuthAction'
 
 /**
  * determineAuthUser gets the user from either the ID token using AuthUser.getIdToken
@@ -63,133 +64,6 @@ const determineAuthUser = async ({
 }
 
 /**
- * redirectUnauthenticatedUser redirects unauthenticated user to the auth page specified
- * in the config or in the configuration of `withAuthUserTokenSSR`
- *
- * @param {Object} redirectSettings
- */
-const redirectUnauthenticatedUser = (
-  unauthenticatedRedirectURL,
-  ctx,
-  AuthUser
-) => {
-  if (!unauthenticatedRedirectURL) {
-    throw new Error(
-      `When "whenUnauthed" is set to AuthAction.REDIRECT_TO_LOGIN, "authPageURL" must be set.`
-    )
-  }
-  const destination =
-    typeof unauthenticatedRedirectURL === 'string'
-      ? unauthenticatedRedirectURL
-      : unauthenticatedRedirectURL({ ctx, AuthUser })
-
-  if (!destination) {
-    throw new Error(
-      'The "authPageURL" must be set to a non-empty string or resolve to a non-empty string'
-    )
-  }
-
-  return {
-    redirect: {
-      destination,
-      permanent: false,
-    },
-  }
-}
-
-/**
- * redirectAuthenticatedUser.
- *
- * @param {} redirectSettings
- */
-const redirectAuthenticatedUser = (authenticatedRedirectURL, ctx, AuthUser) => {
-  if (!authenticatedRedirectURL) {
-    throw new Error(
-      `When "whenAuthed" is set to AuthAction.REDIRECT_TO_APP, "appPageURL" must be set.`
-    )
-  }
-  const destination =
-    typeof authenticatedRedirectURL === 'string'
-      ? authenticatedRedirectURL
-      : authenticatedRedirectURL({ ctx, AuthUser })
-
-  if (!destination) {
-    throw new Error(
-      'The "appPageURL" must be set to a non-empty string or resolve to a non-empty string'
-    )
-  }
-  return {
-    redirect: {
-      destination,
-      permanent: false,
-    },
-  }
-}
-
-/**
- * findLegacyRedirect.
- *
- * @param {} redirectSettings
- */
-const findLegacyRedirect = ({
-  authPageURL,
-  whenUnauthed,
-  whenAuthed,
-  appPageURL,
-  AuthUser,
-  ctx,
-}) => {
-  const unauthenticatedRedirectURL = authPageURL || getConfig().authPageURL // by default, unauthed go to authPageURL
-  const shouldRedirectUnauthedUser =
-    !AuthUser.id && whenUnauthed === AuthAction.REDIRECT_TO_LOGIN
-  const authenticatedRedirectURL = appPageURL || getConfig().appPageURL // by default, authed go to appPageURL
-  const shouldRedirectAuthedUser =
-    AuthUser.id && whenAuthed === AuthAction.REDIRECT_TO_APP
-
-  // If specified, redirect to the login page if the user is unauthed.
-  if (shouldRedirectUnauthedUser)
-    return redirectUnauthenticatedUser(
-      unauthenticatedRedirectURL,
-      ctx,
-      AuthUser
-    )
-
-  // If specified, redirect to the app page if the user is authed.
-  if (shouldRedirectAuthedUser)
-    return redirectAuthenticatedUser(authenticatedRedirectURL, ctx, AuthUser)
-
-  return null
-}
-
-/**
- * findRedirectRule.
- *
- * @param {}
- */
-const findRedirectRule = ({ AuthUser, redirectConfig }) => {
-  const config = redirectConfig || getConfig().redirectConfig
-  if (!config) return null
-
-  const redirect = AuthUser.id
-    ? redirectConfig.authenticatedUser
-    : redirectConfig.unauthenticatedUser
-
-  return { redirect }
-}
-
-/**
- * processRedirect.
- *
- * @param {} redirectSettings
- */
-const processRedirect = (redirectSettings) => {
-  const redirectRule = findRedirectRule(redirectSettings)
-  if (redirectRule) return redirectRule
-
-  return findLegacyRedirect(redirectSettings)
-}
-
-/**
  * An wrapper for a page's exported getServerSideProps that
  * provides the authed user's info as a prop. Optionally,
  * this handles redirects based on auth status.
@@ -208,7 +82,8 @@ const processRedirect = (redirectSettings) => {
  * @param {String|Function} authPageURL - The redirect destination URL when
  *   we redirect to the login page. Can either be a string or a function
  *   that accepts ({ctx, AuthUser}) as args and returns a string.
- * @param {RedirectConfig} redirectConfig -
+ * @param {Object} redirectConfig - The custom redirect config allowing the
+ *   explicit configuration of authenticated and unauthenticated user actions
  * @return {Object} response
  * @return {Object} response.props - The server-side props
  * @return {Object} response.props.AuthUser
