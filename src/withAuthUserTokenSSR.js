@@ -8,6 +8,12 @@ import {
 import { getConfig } from 'src/config'
 import AuthAction from 'src/AuthAction'
 
+/**
+ * determineAuthUser gets the user from either the ID token using AuthUser.getIdToken
+ * or by creating the auth user in unauthenticated user scenarios
+ *
+ * @param {Object} redirectSettings
+ */
 const determineAuthUser = async ({
   useToken,
   res,
@@ -56,6 +62,12 @@ const determineAuthUser = async ({
   })
 }
 
+/**
+ * redirectUnauthenticatedUser redirects unauthenticated user to the auth page specified
+ * in the config or in the configuration of `withAuthUserTokenSSR`
+ *
+ * @param {Object} redirectSettings
+ */
 const redirectUnauthenticatedUser = (
   unauthenticatedRedirectURL,
   ctx,
@@ -85,6 +97,11 @@ const redirectUnauthenticatedUser = (
   }
 }
 
+/**
+ * redirectAuthenticatedUser.
+ *
+ * @param {} redirectSettings
+ */
 const redirectAuthenticatedUser = (authenticatedRedirectURL, ctx, AuthUser) => {
   if (!authenticatedRedirectURL) {
     throw new Error(
@@ -109,6 +126,11 @@ const redirectAuthenticatedUser = (authenticatedRedirectURL, ctx, AuthUser) => {
   }
 }
 
+/**
+ * findLegacyRedirect.
+ *
+ * @param {} redirectSettings
+ */
 const findLegacyRedirect = ({
   authPageURL,
   whenUnauthed,
@@ -139,17 +161,27 @@ const findLegacyRedirect = ({
   return null
 }
 
+/**
+ * findRedirectRule.
+ *
+ * @param {}
+ */
 const findRedirectRule = ({ AuthUser, redirectConfig }) => {
   const config = redirectConfig || getConfig().redirectConfig
   if (!config) return null
 
   const redirect = AuthUser.id
-    ? redirectConfig.authenticatedUserRedirect
-    : redirectConfig.unauthenticatedUserRedirect
+    ? redirectConfig.authenticatedUser
+    : redirectConfig.unauthenticatedUser
 
   return { redirect }
 }
 
+/**
+ * processRedirect.
+ *
+ * @param {} redirectSettings
+ */
 const processRedirect = (redirectSettings) => {
   const redirectRule = findRedirectRule(redirectSettings)
   if (redirectRule) return redirectRule

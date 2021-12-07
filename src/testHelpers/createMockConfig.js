@@ -25,6 +25,16 @@ const createMockConfig = ({ clientSide } = {}) => {
       databaseURL: 'https://my-example-app.firebaseio.com',
       projectId: 'my-example-app-id',
     },
+    redirectConfig: {
+      authenticatedUser: {
+        destination: '/app',
+        permanenent: false,
+      },
+      unauthenticatedUser: {
+        destination: '/app',
+        permanenent: false,
+      },
+    },
     cookies: {
       name: 'someExample',
       keys: useClientSideConfig ? [] : ['abc', 'def'],
